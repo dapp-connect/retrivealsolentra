@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
+    button { padding: 6px 10px; margin: 2px; border: none; border-radius: 6px; cursor: pointer; }
+    .edit-btn { background: #007bff; color: #fff; }
+    .delete-btn { background: #dc3545; color: #fff; }
+    .save-btn { background: #28a745; color: #fff; }
+    input { width: 100%; padding: 5px; }
+  </style>
+</head>
+<body>
+  <h1>👨‍💼 Admin Dashboard</h1>
+  <table id="usersTable">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>First Name</th>
+        <th>Balance</th>
+        <th>Phone</th>
+        <th>Account Type</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="usersBody"></tbody>
+  </table>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // 🔹 Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBKRn1vArBVVjNiYBLYlBpSmD9hmP_I4qo",
+        authDomain: "solentra-ba196.firebaseapp.com",
+        projectId: "solentra-ba196",
+        storageBucket: "solentra-ba196.firebasestorage.app",
+        messagingSenderId: "703994813078",
+        appId: "1:703994813078:web:27bacddd67db0d4660c0b7",
+        measurementId: "G-8SV7PXHSC7"
+    };
+
+    // Init Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const usersBody = document.getElementById("usersBody");
+
+    // Fetch all users
+    async function fetchUsers() {
+      usersBody.innerHTML = "";
+      const snapshot = await getDocs(collection(db, "users"));
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td><input value="${data.email || ''}" data-field="email" data-id="${docSnap.id}" disabled/></td>
+          <td><input value="${data.fname || ''}" data-field="fname" data-id="${docSnap.id}" disabled/></td>
+          <td><input value="${data.amount || ''}" data-field="amount" data-id="${docSnap.id}" disabled/></td>
+          <td><input value="${data.phone || ''}" data-field="phone" data-id="${docSnap.id}" disabled/></td>
+          <td><input value="${data.accttype || ''}" data-field="accttype" data-id="${docSnap.id}" disabled/></td>
+          <td>
+            <button class="edit-btn" data-id="${docSnap.id}">Edit</button>
+            <button class="save-btn" data-id="${docSnap.id}" style="display:none;">Save</button>
+            <button class="delete-btn" data-id="${docSnap.id}">Delete</button>
+          </td>
+        `;
+        usersBody.appendChild(tr);
+      });
+
+      addEventListeners();
+    }
+
+    // Enable editing
+    function addEventListeners() {
+      document.querySelectorAll(".edit-btn").forEach(btn => {
+        btn.addEventListener("click", e => {
+          const id = e.target.dataset.id;
+          toggleEdit(id, true);
+        });
+      });
+
+      document.querySelectorAll(".save-btn").forEach(btn => {
+        btn.addEventListener("click", async e => {
+          const id = e.target.dataset.id;
+          await saveUser(id);
+          toggleEdit(id, false);
+          alert("✅ User updated!");
+        });
+      });
+
+      document.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.addEventListener("click", async e => {
+          const id = e.target.dataset.id;
+          if (confirm("⚠️ Are you sure you want to delete this user?")) {
+            await deleteDoc(doc(db, "users", id));
+            fetchUsers();
+          }
+        });
+      });
+    }
+
+    // Toggle input fields
+    function toggleEdit(id, editable) {
+      document.querySelectorAll(`input[data-id='${id}']`).forEach(input => {
+        input.disabled = !editable;
+      });
+      document.querySelector(`.edit-btn[data-id='${id}']`).style.display = editable ? "none" : "inline-block";
+      document.querySelector(`.save-btn[data-id='${id}']`).style.display = editable ? "inline-block" : "none";
+    }
+
+    // Save user changes
+    async function saveUser(id) {
+      const updatedData = {};
+      document.querySelectorAll(`input[data-id='${id}']`).forEach(input => {
+        updatedData[input.dataset.field] = input.value;
+      });
+      await updateDoc(doc(db, "users", id), updatedData);
+    }
+
+    // Initial fetch
+    fetchUsers();
+  </script>
+</body>
+</html>
